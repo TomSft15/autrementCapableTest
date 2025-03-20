@@ -101,7 +101,7 @@
               <div class="feedback-animation"></div>
             </div>
             
-            <div class="skills-gained">
+            <!-- <div class="skills-gained">
               <h3>Super-pouvoirs gagnés !</h3>
               <div v-if="lastChoiceSkills.length > 0" class="skills-list">
                 <div v-for="(skill, index) in lastChoiceSkills" :key="index" class="skill-item"
@@ -116,7 +116,7 @@
                 </div>
               </div>
               <p v-else class="no-skills">Pas de super-pouvoirs gagnés cette fois...</p>
-            </div>
+            </div> -->
           </div>
         </div>
       </div>
@@ -281,6 +281,7 @@
       
       loadScenario() {
         const scenarioId = parseInt(this.id);
+        console.log("Chargement du scénario ID:", scenarioId);
         this.scenario = scenarios.find(s => s.id === scenarioId);
         
         if (!this.scenario) {
@@ -289,6 +290,8 @@
           if (this.soundEnabled) {
             this.readAloud(this.scenario.contexteIntro);
           }
+          console.log("Scénario chargé:", this.scenario);
+          console.log("Réponses disponibles:", this.scenario.reponses);
           
           // Effet d'apparition progressive du texte
           this.animateText();
@@ -312,6 +315,9 @@
       },
       
       showNextDialogue() {
+        console.log("showNextDialogue appelée");
+        console.log("dialogueIndex:", this.dialogueIndex);
+        console.log("Longueur contexte:", this.scenario.contexte.length);
         this.playSound('next');
         
         if (this.dialogueIndex < this.scenario.contexte.length - 1) {
@@ -326,6 +332,13 @@
           if (this.soundEnabled) {
             this.readAloud(this.scenario.question);
           }
+        }
+        if (this.dialogueIndex >= this.scenario.contexte.length - 1) {
+          console.log("Passage à la phase choix");
+          this.phase = 'choix';
+          
+          console.log("Phase actuelle:", this.phase);
+          console.log("Réponses disponibles:", this.scenario.reponses);
         }
       },
       
@@ -583,6 +596,8 @@
   /* En-tête du jeu */
   .game-header {
     margin-bottom: 20px;
+    padding-top: 40px; /* Ajouter un espace en haut du header pour les contrôles d'accessibilité */
+    position: relative;
   }
   
   /* Barre de progression */
@@ -591,6 +606,9 @@
     align-items: center;
     justify-content: center;
     margin-bottom: 15px;
+    margin-top: 10px;
+    position: relative;
+    z-index: 50; /* Z-index inférieur aux contrôles d'accessibilité */
   }
   
   .progress-step {
@@ -665,14 +683,16 @@
     position: relative;
   }
   
-  /* Panneau d'introduction */
   .intro-panel {
     display: flex;
     flex-direction: column;
     padding: 20px;
   }
-  
+
+  /* Ajoutez cette règle ou modifiez-la si elle existe déjà */
   .story-card {
+    display: flex;
+    flex-direction: column;
     background-color: #f8f9fa;
     border-radius: 12px;
     padding: 20px;
@@ -704,7 +724,7 @@
     justify-content: center;
     margin-top: 10px;
   }
-  
+
   .scene-image {
     max-width: 100%;
     max-height: 250px;
@@ -829,7 +849,7 @@
   
   /* Bouton d'action */
   .action-button {
-    display: flex;
+    display: inline-flex; /* Changez flex à inline-flex */
     align-items: center;
     justify-content: center;
     background-color: #007bff;
@@ -843,6 +863,8 @@
     transition: all 0.3s ease;
     box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
     margin: 15px auto;
+    width: auto;
+    height: auto;
   }
   
   .action-button:hover {
@@ -1050,10 +1072,11 @@
   /* Contrôles d'accessibilité */
   .accessibility-controls {
     position: absolute;
-    top: 10px;
+    top: 0px;
     right: 10px;
     display: flex;
     gap: 5px;
+    z-index: 100;
   }
 
   .accessibility-button {
