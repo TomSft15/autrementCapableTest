@@ -1,8 +1,17 @@
 <template>
   <div class="adventure-map">
+    <div v-if="showBadgeAnimation" class="badge-unlock-overlay">
+      <div class="badge-unlock-animation">
+        <div class="badge-icon">🎭</div>
+        <h2>Badge débloqué !</h2>
+        <h3>Maître des scénarios</h3>
+        <p>Vous avez brillamment résolu tous les scénarios sociaux !</p>
+        <button @click="closeBadgeAnimation" class="close-animation-btn">Continuer</button>
+      </div>
+    </div>
     <!-- En-tête avec personnage guide -->
     <div class="guide-character">
-      <img src="@/assets/avatars/guide.jpg" alt="Guide" class="guide-avatar" />
+      <img src="@/assets/avatars/guide.png" alt="Guide" class="guide-avatar" />
       <div class="speech-bubble">
         <p>Bienvenue dans ton aventure de compétences ! Choisis un défi à relever !</p>
       </div>
@@ -27,7 +36,7 @@
             :style="{ 'top': getNodePosition(index).top + '%', 'left': getNodePosition(index).left + '%' }">
           
           <router-link 
-            :to="{ name: 'ScenarioPage', params: { id: scenario.id } }" 
+            :to="{ name: 'ScenarioPage', params: { urlName: scenario.urlName } }"
             class="scenario-link"
             :class="{ 'disabled': !canAccess(scenario.id) }">
             
@@ -66,14 +75,14 @@
         <span class="btn-text">Recommencer l'aventure</span>
       </button>
       
-      <router-link v-else-if="nextScenarioId" :to="{ name: 'ScenarioPage', params: { id: nextScenarioId } }" class="continue-adventure-btn">
+      <router-link v-else-if="nextScenarioId" :to="{ name: 'ScenarioPage', params: { urlName: getNextScenarioUrlName() } }" class="continue-adventure-btn">
         <span class="btn-icon">➡️</span>
         <span class="btn-text">Continuer l'aventure</span>
       </router-link>
       
-      <router-link v-if="hasProgress" :to="{ name: 'ResultsPage' }" class="view-skills-btn">
+      <router-link v-if="hasProgress" :to="{ name: 'RewardsPage' }" class="view-skills-btn">
         <span class="btn-icon">🏆</span>
-        <span class="btn-text">Voir mes super-pouvoirs</span>
+        <span class="btn-text">Voir mes badges</span>
       </router-link>
     </div>
     
@@ -90,12 +99,8 @@
         <h2>Liste des défis</h2>
         <ul>
           <li v-for="scenario in scenarios" :key="scenario.id" class="accessible-item">
-            <router-link 
-              :to="{ name: 'ScenarioPage', params: { id: scenario.id } }"
-              :class="{ 'disabled': !canAccess(scenario.id) }">
-              Défi {{scenario.id}}: {{ scenario.titre }}
-              <span v-if="isCompleted(scenario.id)" class="completion-text"> - Complété ✓</span>
-            </router-link>
+            Défi {{scenario.id}}: {{ scenario.titre }}
+            <span v-if="isCompleted(scenario.id)" class="completion-text"> - Complété ✓</span>
           </li>
         </ul>
       </div>
@@ -114,7 +119,9 @@ export default {
       completedScenarios: [],
       accessibilityMode: false,
       hasStarted: false,
-      pathsData: []
+      pathsData: [],
+      showBadgeAnimation: false,
+      badgeData: null
     };
   },
   computed: {
@@ -139,6 +146,14 @@ export default {
       this.calculatePaths();
       window.addEventListener('resize', this.calculatePaths);
     });
+    if (this.$route.query.showBadgeUnlock === 'true') {
+      const badgeData = localStorage.getItem('newUnlockedBadge');
+      if (badgeData) {
+        this.badgeData = JSON.parse(badgeData);
+        this.showBadgeAnimation = true;
+        localStorage.removeItem('newUnlockedBadge');
+      }
+    }
   },
 
   beforeUnmount() {
@@ -146,6 +161,9 @@ export default {
     window.removeEventListener('resize', this.calculatePaths);
   },
   methods: {
+    closeBadgeAnimation() {
+      this.showBadgeAnimation = false;
+    },
     // Charger la progression depuis le localStorage
     loadProgress() {
       const savedSkills = localStorage.getItem('userSoftSkills');
@@ -166,16 +184,24 @@ export default {
       localStorage.setItem('completedScenarios', JSON.stringify([]));
       this.hasStarted = true;
       this.completedScenarios = [];
-      this.$router.push({ name: 'ScenarioPage', params: { id: 1 } });
+      const firstScenario = this.scenarios.find(s => s.id === 1);
+      this.$router.push({ name: 'ScenarioPage', params: { urlName: firstScenario.urlName } });
     },
     
+    getNextScenarioUrlName() {
+      const nextId = this.nextScenarioId;
+      const nextScenario = this.scenarios.find(s => s.id === nextId);
+      return nextScenario ? nextScenario.urlName : '';
+    },
+
     // Réinitialiser l'aventure
     resetAdventure() {
-      if (confirm("Es-tu sûr de vouloir recommencer toute l'aventure ? Tes super-pouvoirs seront réinitialisés !")) {
+      if (confirm("Es-tu sûr de vouloir recommencer toute l'aventure ? Tes données seront réinitialisés !")) {
         localStorage.setItem('userSoftSkills', JSON.stringify({}));
         localStorage.setItem('completedScenarios', JSON.stringify([]));
         this.completedScenarios = [];
-        this.$router.push({ name: 'ScenarioPage', params: { id: 1 } });
+        const firstScenario = this.scenarios.find(s => s.id === 1);
+        this.$router.push({ name: 'ScenarioPage', params: { urlName: firstScenario.urlName } })
       }
     },
     
@@ -365,6 +391,86 @@ export default {
   position: relative;
 }
 
+.badge-unlock-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.5s ease-out;
+}
+
+.badge-unlock-animation {
+  background-color: #fff;
+  border-radius: 20px;
+  padding: 30px;
+  text-align: center;
+  max-width: 400px;
+  box-shadow: 0 0 30px rgba(255, 215, 0, 0.6);
+  animation: scaleIn 0.5s ease-out;
+}
+
+.badge-icon {
+  font-size: 80px;
+  margin-bottom: 20px;
+  animation: pulse 2s infinite;
+}
+
+.badge-unlock-animation h2 {
+  color: #FFD700;
+  font-size: 2rem;
+  margin-bottom: 10px;
+}
+
+.badge-unlock-animation h3 {
+  color: #333;
+  font-size: 1.5rem;
+  margin-bottom: 15px;
+}
+
+.badge-unlock-animation p {
+  color: #666;
+  margin-bottom: 20px;
+}
+
+.close-animation-btn {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 50px;
+  font-weight: bold;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.close-animation-btn:hover {
+  background-color: #45a049;
+  transform: scale(1.05);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0.8); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
 /* Personnage guide */
 .guide-character {
   display: flex;
@@ -373,8 +479,8 @@ export default {
 }
 
 .guide-avatar {
-  width: 80px;
-  height: 80px;
+  width: 70px;
+  height: 70px;
   border-radius: 50%;
   border: 3px solid #FFC107;
   background-color: #fff;
@@ -668,6 +774,10 @@ export default {
   transition: all 0.3s ease;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   text-decoration: none;
+  min-width: 220px;
+  max-width: 400px;
+  width: auto;
+  height: auto;
 }
 
 .start-adventure-btn {

@@ -100,23 +100,6 @@
               <p class="feedback-message">{{ feedback }}</p>
               <div class="feedback-animation"></div>
             </div>
-            
-            <!-- <div class="skills-gained">
-              <h3>Super-pouvoirs gagnés !</h3>
-              <div v-if="lastChoiceSkills.length > 0" class="skills-list">
-                <div v-for="(skill, index) in lastChoiceSkills" :key="index" class="skill-item"
-                     :style="{ '--index': index }">
-                  <div class="skill-icon">{{ getSkillIcon(skill.name) }}</div>
-                  <div class="skill-info">
-                    <div class="skill-name">{{ getSkillDisplayName(skill.name) }}</div>
-                    <div class="skill-points" :class="{ 'negative': skill.value < 0 }">
-                      {{ skill.value > 0 ? '+' : '' }}{{ skill.value }} points
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <p v-else class="no-skills">Pas de super-pouvoirs gagnés cette fois...</p>
-            </div> -->
           </div>
         </div>
       </div>
@@ -131,12 +114,12 @@
           <span v-if="highContrastMode">🌓</span>
           <span v-else>🌑</span>
         </button>
-        <button @click="increaseTextSize" class="accessibility-button">
+        <!-- <button @click="increaseTextSize" class="accessibility-button">
           A+
         </button>
         <button @click="decreaseTextSize" class="accessibility-button">
           A-
-        </button>
+        </button> -->
       </div>
   
       <!-- Message de chargement -->
@@ -149,16 +132,18 @@
   
   <script>
   import { scenarios } from '@/data/data.js';
+  import { unlockBadge } from '@/utils/badges.js';
   const avatars = require.context('@/assets/avatars/', false, /\.png$/);
   
   export default {
     name: "ScenarioPage",
     props: {
-      id: String,
+      urlName: String,
     },
     data() {
       return {
         scenario: null,
+        scenarios: scenarios,
         feedback: null,
         phase: 'intro',
         dialogueIndex: 0,
@@ -191,8 +176,8 @@
       window.removeEventListener('beforeunload', this.stopSpeech);
     },
     watch: {
-      $route(to, from) {
-        if (to.params.id !== from.params.id) {
+      urlName(newUrlName, oldUrlName) {
+        if (newUrlName !== oldUrlName) {
           this.stopSpeech();
           this.loadScenario();
           this.phase = 'intro';
@@ -280,9 +265,7 @@
       },
       
       loadScenario() {
-        const scenarioId = parseInt(this.id);
-        console.log("Chargement du scénario ID:", scenarioId);
-        this.scenario = scenarios.find(s => s.id === scenarioId);
+        this.scenario = scenarios.find(s => s.urlName === this.urlName);
         
         if (!this.scenario) {
           console.error("Scénario non trouvé !");
@@ -292,8 +275,7 @@
           }
           console.log("Scénario chargé:", this.scenario);
           console.log("Réponses disponibles:", this.scenario.reponses);
-          
-          // Effet d'apparition progressive du texte
+      
           this.animateText();
         }
       },
@@ -361,21 +343,42 @@
         // Marquer ce scénario comme complété
         this.markScenarioCompleted();
         
-        // Navigation au scénario suivant ou à la page de résultats
+        // Vérifier si c'est le dernier scénario
+        const currentId = this.scenario.id;
+        const isLastScenario = !this.scenarios.some(s => s.id === currentId + 1);
+        
+        if (isLastScenario) {
+          // Déverrouiller le badge "Maître des scénarios"
+          unlockBadge(2);
+          
+          // Stocker l'information que nous venons de déverrouiller un badge
+          localStorage.setItem('newUnlockedBadge', JSON.stringify({
+            id: 2,
+            title: 'Maître des scénarios',
+            description: 'Vous avez brillamment résolu tous les scénarios sociaux !'
+          }));
+        }
+        
         setTimeout(() => {
           this.stopSpeech();
-          const nextId = parseInt(this.id) + 1;
           
-          if (scenarios.some(s => s.id === nextId)) {
-            this.$router.push({ name: "ScenarioPage", params: { id: nextId } });
+          if (isLastScenario) {
+            this.$router.push({ name: "ScenarioList", query: { showBadgeUnlock: 'true' } });
           } else {
-            this.$router.push({ name: "ResultsPage" });
+            const nextId = currentId + 1;
+            const nextScenario = scenarios.find(s => s.id === nextId);
+            if (nextScenario) {
+              this.$router.push({ 
+                name: "ScenarioPage", 
+                params: { urlName: nextScenario.urlName } 
+              });
+            }
           }
-        }, 6000); // Temps plus long pour voir les animations et les compétences gagnées
+        }, 4000);
       },
       
       markScenarioCompleted() {
-        const currentId = parseInt(this.id);
+        const currentId = this.scenario.id;
         
         if (!this.completedScenarios.includes(currentId)) {
           this.completedScenarios.push(currentId);
