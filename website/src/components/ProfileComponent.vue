@@ -1,9 +1,6 @@
 <template>
-  <!-- Utiliser soit le fond animé soit le fond statique en fonction de la propriété animationsEnabled -->
-  <space-background v-if="animationsEnabled" :theme="currentTheme" />
-  <static-backgrounds v-else :theme="currentTheme" />
-
   <div class="profile-container" :class="{ 'high-contrast': highContrastMode }">
+    <button class="close-modal-btn" @click="$emit('close')"></button>
     <!-- En-tête avec avatar et message de bienvenue -->
     <div class="profile-header">
       <div class="avatar-container">
@@ -96,18 +93,20 @@
 
         <div class="settings-card">
           <h3>Accessibilité</h3>
+          <!-- Option d'animation de fond -->
           <div class="setting-item">
-            <label for="contrast-toggle">Mode contraste élevé</label>
+            <label for="animation-toggle">Animations de fond</label>
             <div class="toggle-switch">
               <input
                 type="checkbox"
-                id="contrast-toggle"
-                v-model="highContrastMode"
-                @change="saveAccessibilitySettings"
+                id="animation-toggle"
+                :checked="animationsEnabled"
+                @change="toggleAnimations"
               />
               <span class="toggle-slider"></span>
             </div>
           </div>
+          <!-- Option de taille de texte -->
           <div class="setting-item">
             <label for="text-size">Taille du texte</label>
             <div class="setting-controls">
@@ -119,15 +118,15 @@
               </button>
             </div>
           </div>
-          <!-- Ajout du paramètre d'animation -->
+          <!-- Option de contraste -->
           <div class="setting-item">
-            <label for="animation-toggle">Animations de fond</label>
+            <label for="contrast-toggle">Mode contraste élevé</label>
             <div class="toggle-switch">
               <input
                 type="checkbox"
-                id="animation-toggle"
-                v-model="animationsEnabled"
-                @change="toggleAnimations"
+                id="contrast-toggle"
+                v-model="highContrastMode"
+                @change="saveAccessibilitySettings"
               />
               <span class="toggle-slider"></span>
             </div>
@@ -179,17 +178,17 @@
 </template>
 
 <script>
-import SpaceBackground from '@/components/SpaceBackground.vue'
-import StaticBackgrounds from '@/components/StaticBackgrounds.vue'
-import { BackgroundManager } from '@/utils/BackgroundManager'
-import { BackgroundMixin } from '@/utils/BackgroundMixin'
-
 export default {
-  name: 'UserProfile',
-  mixins: [BackgroundMixin],
-  components: {
-    SpaceBackground,
-    StaticBackgrounds,
+  name: 'ProfileComponent',
+  props: {
+    currentTheme: {
+      type: String,
+      default: 'cosmic',
+    },
+    animationsEnabled: {
+      type: Boolean,
+      default: true,
+    },
   },
   data() {
     return {
@@ -200,7 +199,7 @@ export default {
         age: 16,
         city: 'Lyon',
         level: 3,
-        avatar: require('@/assets/pdp.png'),
+        avatar: require('@/assets/pdp.png'), // Chemin à adapter selon votre structure
         interests: [
           'Jeux vidéo',
           'Musique',
@@ -278,10 +277,6 @@ export default {
       transferCode: '123456',
       transferTimeLeft: 60,
       transferInterval: null,
-
-      // Paramètres de fond d'écran
-      currentTheme: 'cosmic',
-      animationsEnabled: true,
     }
   },
 
@@ -300,16 +295,13 @@ export default {
   created() {
     // Chargement des paramètres d'accessibilité
     this.loadAccessibilitySettings()
-
-    // Chargement des paramètres de thème et d'animation
-    this.currentTheme = BackgroundManager.getCurrentTheme()
-    this.animationsEnabled = BackgroundManager.areAnimationsEnabled()
   },
 
   methods: {
     // Méthode pour activer/désactiver les animations
     toggleAnimations() {
-      BackgroundManager.setAnimationsEnabled(this.animationsEnabled)
+      // Émettre un événement pour que le dashboard puisse mettre à jour son état
+      this.$emit('toggle-animations')
     },
 
     // Méthodes d'édition (simulées pour l'exemple)
@@ -414,21 +406,24 @@ export default {
 
 <style scoped>
 /* Styles généraux */
-
 .profile-container {
+  position: absolute;
   font-family: 'Comic Sans MS', 'Chalkboard SE', 'Marker Felt', sans-serif;
-  max-width: 900px;
-  width: 100%;
+  max-width: 1000px;
+  width: 90%;
   padding: 20px;
-  background-color: #f5f8ff;
+  background-color: #f8f9fa;
   border-radius: 20px;
   box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
-  position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   transition: all 0.3s ease;
+  z-index: 1000;
+  max-height: 90vh;
+  overflow-y: auto;
 }
+
 h1,
 h2,
 h3 {
@@ -548,6 +543,61 @@ button {
   height: 3px;
   background-color: #ffd700;
   border-radius: 3px;
+}
+
+.close-modal-btn {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: transparent;
+  border: none;
+  color: #4a4d9e;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  transition: color 0.3s ease;
+  z-index: 10;
+}
+
+.close-modal-btn:before,
+.close-modal-btn:after {
+  content: '';
+  position: absolute;
+  width: 24px;
+  height: 3px;
+  background-color: #4a4d9e;
+  transition: background-color 0.3s ease;
+}
+
+.close-modal-btn:before {
+  transform: rotate(45deg);
+}
+
+.close-modal-btn:after {
+  transform: rotate(-45deg);
+}
+
+.close-modal-btn:hover:before,
+.close-modal-btn:hover:after {
+  background-color: #ff4081;
+}
+
+/* Mode contraste élevé */
+.high-contrast .close-modal-btn {
+  color: #ffffff;
+}
+
+.high-contrast .close-modal-btn:before,
+.high-contrast .close-modal-btn:after {
+  background-color: #ffffff;
+}
+
+.high-contrast .close-modal-btn:hover:before,
+.high-contrast .close-modal-btn:hover:after {
+  background-color: #ff4081;
 }
 
 /* Cartes d'information */
